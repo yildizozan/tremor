@@ -1,0 +1,4 @@
+#Sat Jul 10 14:53:51 TRT 2021
+base.0=/home/yildizozan/AndroidStudioProjects/Tremor/opencv/build/intermediates/dex/debug/mergeDexDebug/classes.dex
+renamed.0=classes.dex
+path.0=classes.dex
