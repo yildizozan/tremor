@@ -10,7 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -33,6 +32,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -47,8 +47,8 @@ public class MainActivity extends AppCompatActivity {
 
     //    private final Stack<Point> userMovementsStack = new Stack<>();
     int spiralLengthRegular = 0;
-    private final ArrayList<Point> userMovementsRegular = new ArrayList<>();
-    private final ArrayList<Point> userMovementsList = new ArrayList<>();
+    private final ArrayList<Point> listMovementsRegular = new ArrayList<>();
+    private final ArrayList<Point> listMovementsUser = new ArrayList<>();
 
     private static int sceneSize;
     private ImageView imageView;
@@ -103,10 +103,10 @@ public class MainActivity extends AppCompatActivity {
 
     void drawUserSpiral(Point newPoint) {
         Point prev;
-        if (userMovementsList.isEmpty()) {
+        if (listMovementsUser.isEmpty()) {
             prev = new Point(sceneSize / 2, sceneSize / 2);
         } else {
-            prev = userMovementsList.get(userMovementsList.size() - 1);
+            prev = listMovementsUser.get(listMovementsUser.size() - 1);
         }
 
         Scalar lineColor = new Scalar(0);
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP: {
                 Point newPoint = new Point(x, y);
                 drawUserSpiral(newPoint);
-                userMovementsList.add(newPoint);
+                listMovementsUser.add(newPoint);
                 imageView.invalidate();
                 return true;
             }
@@ -141,16 +141,16 @@ public class MainActivity extends AppCompatActivity {
 
     public int calcDistance(ArrayList<Point> points) {
         int sum = 0;
-        Point prev = userMovementsList.get(0);
+        Point prev = listMovementsUser.get(0);
         for (int i = 1; i < points.size(); i++) {
             // Calc
-            Point next = userMovementsList.get(i);
+            Point next = listMovementsUser.get(i);
             double x = next.x - prev.x;
             double y = next.y - prev.y;
             double d = sqrt(pow(x, 2) + pow(y, 2));
             sum += d;
             // Set new prev
-            prev = userMovementsList.get(i);
+            prev = listMovementsUser.get(i);
         }
         return sum;
     }
@@ -202,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
                         drawUserSpiral(newPoint);
 
                         // Add user movement
-                        userMovementsList.add(newPoint);
+                        listMovementsUser.add(newPoint);
 
                         // Merge bg and user input
                         Bitmap result = prepareMats();
@@ -222,17 +222,18 @@ public class MainActivity extends AppCompatActivity {
         buttonDone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int spiralLengthUser = calcDistance(userMovementsList);
+                int spiralLengthUser = calcDistance(listMovementsUser);
                 Log.d("SPIRAL_LENGTH_USER", String.valueOf(spiralLengthUser));
 
                 Context context = v.getContext();
                 Intent intent = new Intent(context, ResultActivity.class);
 
                 // Calculation polar coordinates
-                CalculateDiff polarCoords = new CalculateDiff(userMovementsList);
-                polarCoords.invoke();
-                intent.putExtra("PolarCordinates", (Serializable) polarCoords.getPolarCoordinates());
+                Stack<PolarCoordinate> polarCordinatesRegular = new CalculateDiff(listMovementsRegular).invoke();
+                intent.putExtra("PolarCordinatesRegular", (Serializable) polarCordinatesRegular);
 
+                Stack<PolarCoordinate> polarCordinatesUser = new CalculateDiff(listMovementsUser).invoke();
+                intent.putExtra("PolarCordinatesUser", (Serializable) polarCordinatesUser);
 
                 intent.putExtra("SPIRAL_LENGTH_REGULAR", String.valueOf(spiralLengthRegular));
                 intent.putExtra("SPIRAL_LENGTH_USER", String.valueOf(spiralLengthUser));
@@ -242,8 +243,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-
 
     private Bitmap prepareMats() {
         Mat result = new Mat();
