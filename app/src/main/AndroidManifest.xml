@@ -10,9 +10,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Tremor">
         <activity
+            android:name=".ResultActivity"
+            android:exported="true" />
+        <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppFullScreenTheme" >
+            android:theme="@style/AppFullScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

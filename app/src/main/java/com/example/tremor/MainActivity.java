@@ -2,14 +2,20 @@ package com.example.tremor;
 
 import static org.opencv.core.CvType.CV_8UC1;
 import static java.lang.Math.cos;
+import static java.lang.Math.pow;
 import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,13 +29,13 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Stack;
 
 public class MainActivity extends AppCompatActivity {
-    private static String TAG = "MainActivity";
+    private static final String TAG = "MainActivity";
 
     static {
         if (OpenCVLoader.initDebug()) {
@@ -39,9 +45,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private final Stack<Point> userMovements = new Stack<>();
-    private int sceneSize;
+    //    private final Stack<Point> userMovementsStack = new Stack<>();
+    int spiralLengthRegular = 0;
+    private final ArrayList<Point> userMovementsRegular = new ArrayList<>();
+    private final ArrayList<Point> userMovementsList = new ArrayList<>();
+
+    private static int sceneSize;
     private ImageView imageView;
+    private Button buttonDone;
+
     private Mat bg;
     private Mat scene;
 
@@ -71,7 +83,11 @@ public class MainActivity extends AppCompatActivity {
 
             int x = (int) (r * cos(theta));
             int y = (int) (r * sin(theta));
+
             Point next = new Point(x, y);
+
+            // Calc distance regular spiral
+            spiralLengthRegular += sqrt(pow(next.x - prev.x, 2) + pow(next.y - prev.y, 2));
 
             Point start_ptr = translate(prev);
             Point end_ptr = translate(next);
@@ -87,10 +103,10 @@ public class MainActivity extends AppCompatActivity {
 
     void drawUserSpiral(Point newPoint) {
         Point prev;
-        if (userMovements.isEmpty()) {
+        if (userMovementsList.isEmpty()) {
             prev = new Point(sceneSize / 2, sceneSize / 2);
         } else {
-            prev = userMovements.peek();
+            prev = userMovementsList.get(userMovementsList.size() - 1);
         }
 
         Scalar lineColor = new Scalar(0);
@@ -114,13 +130,29 @@ public class MainActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP: {
                 Point newPoint = new Point(x, y);
                 drawUserSpiral(newPoint);
-                userMovements.push(newPoint);
+                userMovementsList.add(newPoint);
                 imageView.invalidate();
                 return true;
             }
         }
 
         return false;
+    }
+
+    public int calcDistance(ArrayList<Point> points) {
+        int sum = 0;
+        Point prev = userMovementsList.get(0);
+        for (int i = 1; i < points.size(); i++) {
+            // Calc
+            Point next = userMovementsList.get(i);
+            double x = next.x - prev.x;
+            double y = next.y - prev.y;
+            double d = sqrt(pow(x, 2) + pow(y, 2));
+            sum += d;
+            // Set new prev
+            prev = userMovementsList.get(i);
+        }
+        return sum;
     }
 
     @Override
@@ -135,22 +167,23 @@ public class MainActivity extends AppCompatActivity {
         Log.d("Dims", displayMetrics.heightPixels + " " + displayMetrics.widthPixels);
 
         imageView = findViewById(R.id.imageView);
+        buttonDone = findViewById(R.id.buttonDone);
 
         scene = new Mat(sceneSize, sceneSize, CvType.CV_8U, new Scalar(255));
         bg = new Mat(sceneSize, sceneSize, CvType.CV_8U, new Scalar(255));
         drawRegularSpiral(bg, 10, 16, 0.1, 5);
+        Log.d("Regular Spiral Distance", String.valueOf(spiralLengthRegular));
 
         //mat is the Mat object to be converted
 //        Imgproc.cvtColor(image, image, Imgproc.COLOR_BGR2RGBA);
 
         Mat rChannel = new Mat(sceneSize, sceneSize, CvType.CV_8U, new Scalar(255));
 
-        Mat dehazedImg = new Mat(sceneSize, sceneSize, CvType.CV_32FC3);
-        Core.merge(new ArrayList<>(Arrays.asList(bg, scene, rChannel)), dehazedImg);
+        Mat dst = new Mat(sceneSize, sceneSize, CvType.CV_32FC3);
+        Core.merge(new ArrayList<>(Arrays.asList(bg, scene, rChannel)), dst);
 
         //Create Bitmap object
-        Bitmap bmp = convertMat2Bitmap(bg);
-
+        Bitmap bmp = convertMat2Bitmap(dst);
         imageView.setImageBitmap(bmp);
         imageView.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -158,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
                 int x = (int) event.getX();
                 int y = (int) event.getY();
 
-                Log.i("OnTouchEvent", x + " " + y);
+//                Log.i("OnTouchEvent", x + " " + y);
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                     case MotionEvent.ACTION_MOVE:
@@ -169,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
                         drawUserSpiral(newPoint);
 
                         // Add user movement
-                        userMovements.push(newPoint);
+                        userMovementsList.add(newPoint);
 
                         // Merge bg and user input
                         Bitmap result = prepareMats();
@@ -185,7 +218,32 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
+
+        buttonDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int spiralLengthUser = calcDistance(userMovementsList);
+                Log.d("SPIRAL_LENGTH_USER", String.valueOf(spiralLengthUser));
+
+                Context context = v.getContext();
+                Intent intent = new Intent(context, ResultActivity.class);
+
+                // Calculation polar coordinates
+                CalculateDiff polarCoords = new CalculateDiff(userMovementsList);
+                polarCoords.invoke();
+                intent.putExtra("PolarCordinates", (Serializable) polarCoords.getPolarCoordinates());
+
+
+                intent.putExtra("SPIRAL_LENGTH_REGULAR", String.valueOf(spiralLengthRegular));
+                intent.putExtra("SPIRAL_LENGTH_USER", String.valueOf(spiralLengthUser));
+                context.startActivity(intent);
+
+
+            }
+        });
     }
+
+
 
     private Bitmap prepareMats() {
         Mat result = new Mat();
@@ -200,14 +258,9 @@ public class MainActivity extends AppCompatActivity {
         return bmp;
     }
 
-    private Bitmap convertMat2Bitmap(Mat mat) {
+    public Bitmap convertMat2Bitmap(Mat mat) {
         Bitmap bmp = Bitmap.createBitmap(mat.rows(), mat.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(mat, bmp);
         return bmp;
-    }
-
-    private void calculate() {
-        this.userMovements.pop();
-        final Stack<Point> userMovements = new Stack<>();
     }
 }
