@@ -10,6 +10,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Tremor">
         <activity
+            android:name=".BarChartActivity"
+            android:exported="true" />
+        <activity
+            android:name=".BarchartActivity"
+            android:exported="true" />
+        <activity
+            android:name=".MainActivity2"
+            android:exported="true" />
+        <activity
             android:name=".ResultActivity"
             android:exported="true" />
         <activity

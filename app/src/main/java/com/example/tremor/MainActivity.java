@@ -36,6 +36,7 @@ import java.util.Stack;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static int sceneSize;
 
     static {
         if (OpenCVLoader.initDebug()) {
@@ -45,12 +46,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //    private final Stack<Point> userMovementsStack = new Stack<>();
-    int spiralLengthRegular = 0;
     private final ArrayList<Point> listMovementsRegular = new ArrayList<>();
     private final ArrayList<Point> listMovementsUser = new ArrayList<>();
-
-    private static int sceneSize;
+    //    private final Stack<Point> userMovementsStack = new Stack<>();
+    int spiralLengthRegular = 0;
     private ImageView imageView;
     private Button buttonDone;
 
@@ -77,6 +76,10 @@ public class MainActivity extends AppCompatActivity {
         int prev_y = (int) (r * sin(theta));
         Point prev = new Point(prev_x, prev_y);
 
+        // Set regular spiral coords
+        // Starting point center of image
+        listMovementsRegular.add(new Point(sceneSize / 2, sceneSize / 2));
+
         while (theta < 2 * loops * Math.PI) {
             theta += step / r;
             r = a + b * theta;
@@ -91,6 +94,9 @@ public class MainActivity extends AppCompatActivity {
 
             Point start_ptr = translate(prev);
             Point end_ptr = translate(next);
+
+            // Set regular spiral coords
+            listMovementsRegular.add(next);
 
             Scalar lineColor = new Scalar(0);
             int lineWidth = 3;
@@ -191,11 +197,14 @@ public class MainActivity extends AppCompatActivity {
                 int x = (int) event.getX();
                 int y = (int) event.getY();
 
+                Log.d("POINT LENGTH", String.valueOf(listMovementsUser.size()));
+
 //                Log.i("OnTouchEvent", x + " " + y);
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                     case MotionEvent.ACTION_MOVE:
-                    case MotionEvent.ACTION_UP: {
+                    case MotionEvent.ACTION_UP:
+                        {
                         Point newPoint = new Point(x, y);
 
                         //
@@ -229,11 +238,14 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(context, ResultActivity.class);
 
                 // Calculation polar coordinates
-                Stack<PolarCoordinate> polarCordinatesRegular = new CalculateDiff(listMovementsRegular).invoke();
-                intent.putExtra("PolarCordinatesRegular", (Serializable) polarCordinatesRegular);
 
-                Stack<PolarCoordinate> polarCordinatesUser = new CalculateDiff(listMovementsUser).invoke();
-                intent.putExtra("PolarCordinatesUser", (Serializable) polarCordinatesUser);
+                ArrayList<PolarCoordinate> polarCordinatesRegular = new CalculateDiff(listMovementsRegular).invoke(true);
+                PolarCordinatesRegular singletonPolarCordinatesRegular = PolarCordinatesRegular.getInstance();
+                singletonPolarCordinatesRegular.setDatas(polarCordinatesRegular);
+
+                ArrayList<PolarCoordinate> polarCordinatesUser = new CalculateDiff(listMovementsUser).invoke(false);
+                PolarCordinatesUser singletonPolarCordinatesUser = PolarCordinatesUser.getInstance();
+                singletonPolarCordinatesUser.setDatas(polarCordinatesUser);
 
                 intent.putExtra("SPIRAL_LENGTH_REGULAR", String.valueOf(spiralLengthRegular));
                 intent.putExtra("SPIRAL_LENGTH_USER", String.valueOf(spiralLengthUser));

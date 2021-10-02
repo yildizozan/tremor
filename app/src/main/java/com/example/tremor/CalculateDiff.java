@@ -1,13 +1,18 @@
 package com.example.tremor;
 
+import android.util.Log;
+
 import org.opencv.core.Point;
 
 import java.util.ArrayList;
-import java.util.Stack;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class CalculateDiff {
     private final ArrayList<Point> cartesianCoordinates;
-    private final Stack<PolarCoordinate> polarCoordinates;
+    private ArrayList<PolarCoordinate> polarCoordinates;
 
     /**
      *
@@ -15,17 +20,37 @@ public class CalculateDiff {
      */
     CalculateDiff(ArrayList<Point> cartesianCoordinates) {
         this.cartesianCoordinates = cartesianCoordinates;
-        this.polarCoordinates = new Stack<>();
+        this.polarCoordinates = new ArrayList<>();
     }
 
     /**
      *
-     * @return Stack<PolarCoordinate>
+     * @return ArrayList<PolarCoordinate>
      */
-    public Stack<PolarCoordinate> invoke() {
-        for (int i = 0; i < cartesianCoordinates.size(); i++) {
-            this.polarCoordinates.push(polar2cart(cartesianCoordinates.get(i)));
+    public ArrayList<PolarCoordinate> invoke(boolean isRegular) {
+        /*
+        Map<String, PolarCoordinate> map = new HashMap<>();
+        for (int i = 0; i < cartesianCoordinates.size(); i += 100) {
+            final PolarCoordinate coordinate = this.polar2cart(cartesianCoordinates.get(i));
+            final int degree = (int) (coordinate.getTheta() * (180/ Math.PI));
+            Log.d("THETA", String.valueOf(coordinate.getTheta() ));
+            map.put(String.valueOf(degree), coordinate);
         }
+         */
+
+        if (isRegular) {
+            for (int i = 0; i < cartesianCoordinates.size(); i += 100) {
+                final PolarCoordinate coordinate = this.polar2cart(cartesianCoordinates.get(i));
+                this.polarCoordinates.add(coordinate);
+            }
+        } else {
+            for (int i = 0; i < cartesianCoordinates.size(); i += 1) {
+                final PolarCoordinate coordinate = this.polar2cart(cartesianCoordinates.get(i));
+                this.polarCoordinates.add(coordinate);
+            }
+        }
+
+//        polarCoordinates = new ArrayList<>(map.values());
         return polarCoordinates;
     }
 
@@ -43,7 +68,7 @@ public class CalculateDiff {
         return cartesianCoordinates;
     }
 
-    public Stack<PolarCoordinate> getPolarCoordinates() {
+    public ArrayList<PolarCoordinate> getPolarCoordinates() {
         return polarCoordinates;
     }
 }

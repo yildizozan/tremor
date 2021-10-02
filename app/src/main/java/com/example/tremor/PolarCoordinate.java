@@ -2,7 +2,7 @@ package com.example.tremor;
 
 import java.io.Serializable;
 
-public class PolarCoordinate implements Serializable {
+public class PolarCoordinate {
     private final double rho;
     private final double theta;
 
